@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>FlatCityBuf Test</title>
+    <script>
+        // Test script to verify FlatCityBuf loading
+        window.addEventListener('load', async () => {
+            console.log('=== FlatCityBuf Test Started ===');
+
+            const testUrl = 'https://storage.googleapis.com/flatcitybuf/3dbag_subset_all_index.fcb';
+            console.log('Test URL:', testUrl);
+
+            try {
+                // Test 1: Check if @cityjson/flatcitybuf module loads
+                console.log('\n--- Test 1: Loading WASM module ---');
+                const fcb = await import('@cityjson/flatcitybuf');
+                console.log('✓ FlatCityBuf module loaded');
+                console.log('Available exports:', Object.keys(fcb));
+
+                // Test 2: Initialize WASM
+                console.log('\n--- Test 2: Initializing WASM ---');
+                await fcb.default();
+                console.log('✓ WASM initialized');
+
+                // Test 3: Create HTTP reader
+                console.log('\n--- Test 3: Creating HttpFcbReader ---');
+                const reader = new fcb.HttpFcbReader(testUrl);
+                console.log('✓ HttpFcbReader created');
+
+                // Test 4: Get CityJSON header
+                console.log('\n--- Test 4: Getting CityJSON header ---');
+                const cityJSON = reader.cityjson();
+                console.log('✓ CityJSON header:', cityJSON);
+
+                // Test 5: Get metadata
+                console.log('\n--- Test 5: Getting metadata ---');
+                const meta = reader.meta();
+                console.log('✓ Metadata:', meta);
+                console.log('  - Geographical extent:', meta.geographical_extent);
+
+                // Test 6: Perform spatial query
+                console.log('\n--- Test 6: Performing spatial query ---');
+                const [minX, minY, , maxX, maxY] = meta.geographical_extent;
+                const centerX = (minX + maxX) / 2;
+                const centerY = (minY + maxY) / 2;
+                const bufferSize = 250;
+
+                const spatialQuery = new fcb.WasmSpatialQuery({
+                    type: 'BoundingBox',
+                    minX: centerX - bufferSize,
+                    minY: centerY - bufferSize,
+                    maxX: centerX + bufferSize,
+                    maxY: centerY + bufferSize
+                });
+
+                console.log('Query bbox:', {
+                    minX: centerX - bufferSize,
+                    minY: centerY - bufferSize,
+                    maxX: centerX + bufferSize,
+                    maxY: centerY + bufferSize
+                });
+
+                const iter = await reader.select_spatial_paged(spatialQuery, 1000, null);
+                console.log('✓ Spatial query executed');
+
+                // Test 7: Read features
+                console.log('\n--- Test 7: Reading features ---');
+                const features = [];
+                let feature = await iter.next();
+                while (feature !== undefined) {
+                    features.push(feature);
+                    feature = await iter.next();
+                }
+                console.log('✓ Features loaded:', features.length);
+                console.log('Sample feature:', features[0]);
+
+                // Test 8: Convert to CityJSON
+                console.log('\n--- Test 8: Converting to CityJSON ---');
+                const fullCityJSON = fcb.cjseqToCj(cityJSON, features);
+                console.log('✓ CityJSON created');
+                console.log('  - CityObjects count:', Object.keys(fullCityJSON.CityObjects || {}).length);
+                console.log('  - Vertices count:', (fullCityJSON.vertices || []).length);
+
+                console.log('\n=== ✅ All Tests Passed! ===');
+
+            } catch (error) {
+                console.error('\n=== ❌ Test Failed ===');
+                console.error('Error:', error);
+                console.error('Stack:', error.stack);
+            }
+        });
+    </script>
+</head>
+<body>
+    <h1>FlatCityBuf Test</h1>
+    <p>Open the browser console to see test results.</p>
+    <p>Expected console output:</p>
+    <ul>
+        <li>WASM module initialization</li>
+        <li>HttpFcbReader creation</li>
+        <li>CityJSON header</li>
+        <li>Metadata with geographical extent</li>
+        <li>Spatial query execution</li>
+        <li>Feature count (should be > 0)</li>
+    </ul>
+</body>
+</html>

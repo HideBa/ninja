@@ -708,7 +708,7 @@
                 v-model="fcbUrl"
                 type="text"
                 class="form-control"
-                placeholder="https://example.com/data.fcb"
+                placeholder="https://storage.googleapis.com/flatcitybuf/3dbag_subset_all_index.fcb"
                 @keyup.enter="loadFlatCityBuf"
               >
               <div class="input-group-append">
