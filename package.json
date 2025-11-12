@@ -7,9 +7,10 @@
   },
   "dependencies": {
     "@cityjson/cjseq": "^0.0.1",
+    "@cityjson/flatcitybuf": "^0.2.0",
     "@fortawesome/fontawesome-free": "^5.15.4",
-    "cityjson-threejs-loader": "github:cityjson/cityjson-threejs-loader#develop",
     "bootstrap": "^4.6.1",
+    "cityjson-threejs-loader": "github:cityjson/cityjson-threejs-loader#develop",
     "earcut": "^2.2.2",
     "jquery": "^3.4.1",
     "lodash": "^4.17.15",

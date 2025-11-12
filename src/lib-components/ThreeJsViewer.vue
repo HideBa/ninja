@@ -13,6 +13,7 @@ import { SRGBColorSpace } from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { GTAOPass, OutputPass, RenderPass } from 'three/examples/jsm/Addons.js';
 import GUI from 'three/examples/jsm/libs/lil-gui.module.min.js';
+import { FlatCityBufLoader } from '../base/FlatCityBufLoader.js';
 
 export default {
 	name: 'ThreeJsViewer',
@@ -139,6 +140,14 @@ export default {
 			type: String,
 			default: "undefined"
 		},
+		fcbUrl: {
+			type: String,
+			default: ""
+		},
+		isFlatCityBuf: {
+			type: Boolean,
+			default: false
+		},
 	},
 	data() {
 
@@ -151,6 +160,7 @@ export default {
 				y: - 1
 			},
 			parser: null,
+			fcbLoader: null,
 
 		};
 
@@ -371,6 +381,15 @@ export default {
 
 			},
 			deep: true
+		},
+		fcbUrl: async function ( newUrl ) {
+
+			if ( newUrl && this.isFlatCityBuf ) {
+
+				await this.loadFlatCityBufData( newUrl );
+
+			}
+
 		}
 	},
 	beforeCreate() {
@@ -799,6 +818,91 @@ export default {
 		getLods() {
 
 			return this.lods;
+
+		},
+		async loadFlatCityBufData( url ) {
+
+			try {
+
+				this.$emit( 'rendering', true );
+
+				// Clear existing scene
+				this.clearScene();
+
+				// Create FlatCityBufLoader if not exists
+				if ( ! this.fcbLoader ) {
+
+					this.fcbLoader = new FlatCityBufLoader();
+
+					// Setup callbacks
+					this.fcbLoader.loadingCallbacks.onLoadStart = () => {
+
+						this.$emit( 'rendering', true );
+
+					};
+
+					this.fcbLoader.loadingCallbacks.onLoadEnd = () => {
+
+						this.$emit( 'rendering', false );
+						this.updateScene();
+
+					};
+
+					this.fcbLoader.loadingCallbacks.onError = ( error ) => {
+
+						console.error( 'FlatCityBuf loading error:', error );
+						this.$emit( 'rendering', false );
+
+					};
+
+				}
+
+				// Load data
+				await this.fcbLoader.load( url );
+
+				// Add FlatCityBuf scene to main scene
+				this.scene.add( this.fcbLoader.scene );
+
+				// Create visualization helpers
+				this.fcbLoader.createFrustumHelper( this.scene );
+				this.fcbLoader.createExtentHelper( this.scene );
+				this.fcbLoader.createGeoExtentHelper( this.scene );
+
+				// Setup camera observer for dynamic loading
+				this.fcbLoader.setupCameraObserver( this.camera, this.controls );
+
+				// Fit camera to geographical extent
+				if ( this.fcbLoader.geographicalExtent ) {
+
+					const [ minX, minY, minZ, maxX, maxY, maxZ ] = this.fcbLoader.geographicalExtent;
+
+					// Create bounding box
+					const bbox = new THREE.Box3(
+						new THREE.Vector3( minX, minZ, minY ),
+						new THREE.Vector3( maxX, maxZ, maxY )
+					);
+
+					// Apply transformation if available
+					if ( this.fcbLoader.matrix ) {
+
+						bbox.applyMatrix4( this.fcbLoader.matrix );
+
+					}
+
+					this.fitCameraToSelection( this.camera, this.controls, bbox );
+
+				}
+
+				this.updateScene();
+				this.$emit( 'rendering', false );
+				this.$emit( 'loadCompleted' );
+
+			} catch ( error ) {
+
+				console.error( 'Failed to load FlatCityBuf:', error );
+				this.$emit( 'rendering', false );
+
+			}
 
 		}
 	}

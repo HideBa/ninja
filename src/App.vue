@@ -576,6 +576,8 @@
               :double-side="doubleSide"
               :ambient-occlusion="ambientOcclusion"
               :file-type="file_type"
+              :fcb-url="fcbUrl"
+              :is-flat-city-buf="isFlatCityBuf"
               @object_clicked="move_to_object($event)"
               @rendering="loading = $event"
               @loadCompleted="onLoadComplete()"
@@ -699,6 +701,26 @@
                 >Choose file or drop it here...</label>
               </div>
             </div>
+            <h2>FlatCityBuf URL</h2>
+            <p>Or load data dynamically from a FlatCityBuf URL:</p>
+            <div class="input-group mb-3">
+              <input
+                v-model="fcbUrl"
+                type="text"
+                class="form-control"
+                placeholder="https://example.com/data.fcb"
+                @keyup.enter="loadFlatCityBuf"
+              >
+              <div class="input-group-append">
+                <button
+                  class="btn btn-primary"
+                  type="button"
+                  @click="loadFlatCityBuf"
+                >
+                  <i class="fas fa-globe mr-1"></i> Load
+                </button>
+              </div>
+            </div>
             <div
               v-show="error_message"
               class="alert alert-danger"
@@ -753,6 +775,8 @@ export default {
 			loading: false,
 			error_message: null,
 			file_type: "json",
+			fcbUrl: "",
+			isFlatCityBuf: false,
 			active_sidebar: 'objects', // objects/versions
 			has_versions: false,
 			active_branch: 'master',
@@ -1191,6 +1215,37 @@ export default {
 			this.materialThemes = this.getMaterialThemes( this.citymodel );
 			this.textureThemes = this.getTextureThemes( this.citymodel );
 			this.textureManager = new TextureManager( this.citymodel );
+
+		},
+		async loadFlatCityBuf() {
+
+			if ( ! this.fcbUrl || this.fcbUrl.trim() === '' ) {
+
+				this.error_message = 'Please enter a FlatCityBuf URL';
+				return;
+
+			}
+
+			this.loading = true;
+			this.error_message = null;
+			this.isFlatCityBuf = true;
+			this.file_type = "fcb";
+
+			try {
+
+				// The actual loading will be handled by ThreeJsViewer
+				// We just set the file_loaded flag and pass the URL
+				this.file_loaded = true;
+
+			} catch ( error ) {
+
+				console.error( 'Error loading FlatCityBuf:', error );
+				this.error_message = 'Failed to load FlatCityBuf: ' + error.message;
+				this.loading = false;
+				this.isFlatCityBuf = false;
+				this.file_loaded = false;
+
+			}
 
 		}
 	}
